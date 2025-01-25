@@ -7,7 +7,6 @@
     <color name="purple_700">#3700B3</color>
     <color name="teal_200">#03DAC5</color>
     <color name="teal_700">#018786</color>
-    <color name="purple_500">#9C27B0</color>
     <!-- Background and Surface Colors -->
     <color name="background">#FFFFFF</color> <!-- Light background -->
     <color name="surface">#F5F5F5</color> <!-- Light elevated surface -->
@@ -16,12 +15,6 @@
     <color name="text_primary">#000000</color> <!-- Black text for light background -->
     <color name="text_secondary">#757575</color> <!-- Grey text -->
 
-    <color name="pastel_food_drink">#FFB3B3</color> <!-- Light pastel pink -->
-    <color name="pastel_transportation">#FFD9B3</color> <!-- Light pastel orange -->
-    <color name="pastel_housing">#FFF2B3</color> <!-- Light pastel yellow -->
-    <color name="pastel_personal_care">#D9FFB3</color> <!-- Light pastel green -->
-    <color name="pastel_shopping">#B3FFF2</color> <!-- Light pastel aqua -->
-    <color name="pastel_salary">#D9B3FF</color> <!-- Light pastel purple -->
     <color name="pastel_default_color">#FFFFFF</color> <!-- White as default for light mode -->
     <!-- colors.xml -->
     <color name="green_500">#4CAF50</color>

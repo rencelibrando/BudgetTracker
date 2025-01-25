@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Observer;
 
 import com.expensetracker.budgettracker.data.DatabaseHelper;
 import com.expensetracker.budgettracker.models.Transaction;
@@ -24,12 +25,14 @@ import java.util.concurrent.Executors;
 
 public class TransactionViewModel extends AndroidViewModel {
     private static final String TAG = "TransactionViewModel";
+    private final Observer<List<Transaction>> transactionsObserver =
+            transactions -> updateTotals();
     private final DatabaseHelper databaseHelper;
     private final ExecutorService executorService;
 
     // Database schema constants (must match DatabaseHelper.java)
     private static final String TABLE_TRANSACTIONS = "transactions";
-    private static final String COL_ID = "transaction_id";
+    private static final String COL_ID = "id";
     private static final String COL_AMOUNT = "amount";
     private static final String COL_CATEGORY = "category";
     private static final String COL_DATE = "date";
@@ -46,7 +49,7 @@ public class TransactionViewModel extends AndroidViewModel {
         super(application);
         databaseHelper = new DatabaseHelper(application);
         executorService = Executors.newSingleThreadExecutor();
-
+        transactions.observeForever(transactions -> updateTotals());
         // Configure balance calculations
         balance.addSource(totalIncome, income ->
                 balance.setValue(income - (totalExpense.getValue() != null ? totalExpense.getValue() : 0.0))
@@ -58,7 +61,7 @@ public class TransactionViewModel extends AndroidViewModel {
         loadTransactions();
     }
 
-    private void loadTransactions() {
+    public void loadTransactions() {
         executorService.execute(() -> {
             List<Transaction> transactionsList = new ArrayList<>();
             SQLiteDatabase db = databaseHelper.getReadableDatabase();
@@ -91,7 +94,6 @@ public class TransactionViewModel extends AndroidViewModel {
             }
 
             transactions.postValue(Collections.unmodifiableList(transactionsList));
-            updateTotals();
         });
     }
 
@@ -134,7 +136,7 @@ public class TransactionViewModel extends AndroidViewModel {
         double expense = 0;
 
         List<Transaction> currentList = transactions.getValue();
-        if (currentList != null) {
+        if (currentList != null && !currentList.isEmpty()) {
             for (Transaction t : currentList) {
                 if ("income".equalsIgnoreCase(t.getType())) {
                     income += t.getAmount();
@@ -147,7 +149,6 @@ public class TransactionViewModel extends AndroidViewModel {
         totalIncome.postValue(income);
         totalExpense.postValue(expense);
     }
-
     public void deleteTransaction(Transaction transaction) {
         executorService.execute(() -> {
             SQLiteDatabase db = databaseHelper.getWritableDatabase();
@@ -165,6 +166,7 @@ public class TransactionViewModel extends AndroidViewModel {
     @Override
     protected void onCleared() {
         super.onCleared();
+        transactions.removeObserver(transactionsObserver); // Remove observer to prevent leaks
         executorService.shutdown();
     }
 }

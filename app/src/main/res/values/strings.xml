@@ -8,7 +8,12 @@
     <string name="password">Password</string>
     <string name="log_in">Log In</string>
     <string name="_0">₱0</string>
-    <string name="food_amp_drink"><![CDATA[Food & Drink]]></string>
+    <string name="category_food">Food &amp; Drink</string>
+    <string name="category_transport">Transportation</string>
+    <string name="category_housing">Housing &amp; Utilities</string>
+    <string name="category_personal_care">Personal Care</string>
+    <string name="category_shopping">Shopping</string>
+    <string name="category_salary">Salary</string>
     <string name="food_amp_drink_description">Food and drink icon</string>
     <string name="welcome_to_home">Welcome to Home</string>
     <string name="total_expenses">Total Expenses: ₱%.2f</string>
@@ -70,4 +75,8 @@
     <string name="registration_successful">Registration successful!</string>
     <string name="log_out">Log Out</string>
     <string name="menu_description">User menu dropdown</string>
+    <string name="amount_required">Please enter an amount</string>
+    <string name="amount_positive">Amount must be greater than 0</string>
+    <string name="invalid_amount_format">Invalid number format</string>
+    <string name="transaction_added">Transaction added!</string>
 </resources>

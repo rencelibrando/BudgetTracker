@@ -29,7 +29,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<TransactionsAdapte
 
     private final List<Transaction> transactions;
     private final OnItemClickListener listener;
-    private final Map<String, Integer> categoryIcons = new HashMap<String, Integer>() {{
+    private final Map<String, Integer> categoryIcons = new HashMap<>() {{
         put("food & drink", R.drawable.ic_food);
         put("transportation", R.drawable.ic_transport);
         put("salary", R.drawable.ic_salary);
@@ -114,6 +114,7 @@ public class TransactionsAdapter extends RecyclerView.Adapter<TransactionsAdapte
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
             Date date = inputFormat.parse(rawDate);
             SimpleDateFormat outputFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.US);
+            assert date != null;
             return outputFormat.format(date);
         } catch (ParseException e) {
             Log.e("DateFormat", "Error formatting date: " + rawDate, e);

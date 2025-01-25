@@ -2,6 +2,8 @@ package com.expensetracker.budgettracker.models;
 
 import android.annotation.SuppressLint;
 
+import androidx.annotation.NonNull;
+
 public class Transaction {
     private final String category;
     private final double amount; // Changed to double for easier calculations
@@ -43,6 +45,7 @@ public class Transaction {
         return String.format("₱%,.2f", amount); // Format as currency with commas
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "Transaction{" +

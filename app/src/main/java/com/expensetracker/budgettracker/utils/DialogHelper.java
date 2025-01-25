@@ -50,20 +50,18 @@ public class DialogHelper {
         }
     }
 
-    // Fixed integration example
+    // Corrected integration example
     public static void integrateExample(Context context, Flashcard flashcard, FlashcardsAdapter adapter, HomeViewModel homeViewModel, int position) {
         DialogHelper.showEditAmountDialog(
                 context,
                 flashcard,
                 newAmount -> {
-                    // Extract numeric value from formatted string
                     String numericValue = newAmount.replace("₱", "");
                     flashcard.setAmount(newAmount);
+                    // Pass the updated String amount to the adapter
                     adapter.updateFlashcard(position, newAmount);
-                    homeViewModel.updateFlashcardAmount(
-                            flashcard,
-                            Double.parseDouble(numericValue) // Fixed here
-                    );
+                    // Pass the Flashcard's ID (or relevant String) and amount to ViewModel
+                    homeViewModel.updateFlashcardAmount(flashcard.getId(), Double.parseDouble(numericValue));
                 }
         );
     }

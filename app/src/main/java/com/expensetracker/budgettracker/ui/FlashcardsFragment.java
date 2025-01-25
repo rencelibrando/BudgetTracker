@@ -91,10 +91,11 @@ public class FlashcardsFragment extends Fragment {
     }
 
     private void updateFlashcardAmount(Flashcard flashcard, int position, double amount) {
-        // Use static method call for currency formatting
         String formattedAmount = HomeViewModel.formatCurrency(amount);
+
         flashcard.setAmount(formattedAmount);
         adapter.updateFlashcard(position, formattedAmount);
-        homeViewModel.updateFlashcardAmount(flashcard, amount);
+
+        homeViewModel.updateFlashcardAmount(flashcard.getLabel(), amount);
     }
 }

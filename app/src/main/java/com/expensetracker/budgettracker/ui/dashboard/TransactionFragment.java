@@ -18,7 +18,6 @@ import com.expensetracker.budgettracker.databinding.FragmentTransactionBinding;
 import com.expensetracker.budgettracker.models.Transaction;
 
 import java.util.ArrayList;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 

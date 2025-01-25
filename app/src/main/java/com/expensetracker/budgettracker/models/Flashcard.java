@@ -1,7 +1,5 @@
 package com.expensetracker.budgettracker.models;
 
-import java.util.UUID;
-
 public class Flashcard {
     private final int iconResId;
     private final String label;

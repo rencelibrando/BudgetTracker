@@ -9,21 +9,23 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.ItemTouchHelper;
+
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.expensetracker.budgettracker.R;
 import com.expensetracker.budgettracker.models.Flashcard;
-import com.google.android.material.snackbar.Snackbar;
+
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.FlashcardViewHolder> {
 
-    private List<Flashcard> flashcards;
+    private final List<Flashcard> flashcards;
     private final OnItemClickListener listener;
-
+    private static final Logger logger = Logger.getLogger(FlashcardsAdapter.class.getName());
     public interface OnItemClickListener {
         void onItemClick(Flashcard flashcard, int position);
     }
@@ -52,7 +54,7 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
             holder.amount.setText(flashcard.getAmount());
         } catch (Exception e) {
             // Handle potential null/data issues
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "An error occurred", e);
         }
 
         holder.itemView.setOnClickListener(v -> {
@@ -80,13 +82,7 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
         diffResult.dispatchUpdatesTo(this);
     }
 
-    // Added null check for remove operation
-    public void removeFlashcard(int position) {
-        if (position >= 0 && position < flashcards.size()) {
-            flashcards.remove(position);
-            notifyItemRemoved(position);
-        }
-    }
+
 
     // ViewHolder remains the same
     protected static class FlashcardViewHolder extends RecyclerView.ViewHolder {
@@ -101,41 +97,6 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
             amount = itemView.findViewById(R.id.card_amount);
         }
     }
-
-    // Added null check in swipe handler
-    public static void attachSwipeGesture(RecyclerView recyclerView, FlashcardsAdapter adapter) {
-        ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
-            @Override
-            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
-                return false;
-            }
-
-            @Override
-            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                int position = viewHolder.getBindingAdapterPosition();
-                if (position == RecyclerView.NO_POSITION) return;
-
-                Flashcard removedFlashcard = adapter.flashcards.get(position);
-
-                if (direction == ItemTouchHelper.LEFT) {
-                    adapter.removeFlashcard(position);
-                    Snackbar.make(recyclerView, "Flashcard deleted", Snackbar.LENGTH_LONG)
-                            .setAction("UNDO", v -> {
-                                if (position <= adapter.flashcards.size()) {
-                                    adapter.flashcards.add(position, removedFlashcard);
-                                    adapter.notifyItemInserted(position);
-                                }
-                            }).show();
-                } else if (direction == ItemTouchHelper.RIGHT) {
-                    Snackbar.make(recyclerView, "Editing feature coming soon!", Snackbar.LENGTH_SHORT).show();
-                    adapter.notifyItemChanged(position);
-                }
-            }
-        };
-
-        new ItemTouchHelper(simpleCallback).attachToRecyclerView(recyclerView);
-    }
-
     // Enhanced DiffUtil callback
     static class FlashcardsDiffCallback extends DiffUtil.Callback {
         private final List<Flashcard> oldList;

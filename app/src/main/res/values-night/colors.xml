@@ -2,29 +2,12 @@
     <!-- Primary Colors -->
     <color name="purple_200">#BB86FC</color>
     <color name="purple_700">#3700B3</color>
-    <color name="purple_500">#9C27B0</color>
     <color name="teal_200">#03DAC6</color>
     <color name="teal_700">#018786</color>
     <color name="white">#FFFFFF</color> <!-- Pure white -->
     <color name="black">#000000</color>
-    <!-- Background and Surface Colors -->
     <color name="background">#121212</color> <!-- Dark background -->
     <color name="surface">#1E1E1E</color> <!-- Dark elevated surface -->
-
-    <!-- Text Colors -->
     <color name="text_primary">#FFFFFF</color> <!-- White text for dark background -->
     <color name="text_secondary">#B3B3B3</color> <!-- Dimmed text -->
-
-
-    <!-- Dark mode pastel colors -->
-    <color name="pastel_food_drink">#A64D4D</color> <!-- Dark pastel pink -->
-    <color name="pastel_transportation">#A65C4D</color> <!-- Dark pastel orange -->
-    <color name="pastel_housing_utilities" tools:ignore="MissingDefaultResource">#A67E4D</color> <!-- Dark pastel yellow -->
-    <color name="pastel_personal_care">#4DA64D</color> <!-- Dark pastel green -->
-    <color name="pastel_shopping">#4DA68C</color> <!-- Dark pastel aqua -->
-    <color name="pastel_salary">#724DA6</color> <!-- Dark pastel purple -->
-    <color name="pastel_default_color">#FFFFFF</color> <!-- White as default for light mode -->
-
-
-
 </resources>

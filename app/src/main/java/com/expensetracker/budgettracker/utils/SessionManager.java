@@ -30,9 +30,6 @@ public class SessionManager {
         return pref.getLong(KEY_USER_ID, -1L);
     }
 
-    public String getUsername() {
-        return pref.getString(KEY_USERNAME, "");
-    }
 
     public void logoutUser() {
         editor.remove(KEY_USER_ID);
