@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="food_amp_drink"><![CDATA[Food & Drink]]></string>
+    <string name="welcome_to_home">Welcome to Home</string>
+    <string name="total_expenses_0">Total Expenses: ₱0</string>
+    <string name="total_income_0">Total Income: ₱0</string>
+    <string name="enter_amount">Enter amount</string>
+    <string name="select_date">Select Date</string>
+</resources>
