@@ -1,15 +1,17 @@
 package com.expensetracker.budgettracker.ui.home;
-
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,6 +24,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import com.expensetracker.budgettracker.LoginActivity;
 import com.expensetracker.budgettracker.R;
 import com.expensetracker.budgettracker.adapters.FlashcardsAdapter;
+import com.expensetracker.budgettracker.data.DatabaseHelper;
 import com.expensetracker.budgettracker.databinding.FragmentHomeBinding;
 import com.expensetracker.budgettracker.models.Flashcard;
 import com.expensetracker.budgettracker.models.Transaction;
@@ -51,14 +54,8 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
-        TextView tvLogout = view.findViewById(R.id.tv_logout);
-        tvLogout.setOnClickListener(v -> {
-            new SessionManager(requireContext()).logoutUser();
-            startActivity(new Intent(requireActivity(), LoginActivity.class));
-            requireActivity().finish();
-        });
-
+        setupUserMenu();
+        
         transactionViewModel = new ViewModelProvider(requireActivity()).get(TransactionViewModel.class);
         HomeViewModelFactory factory = new HomeViewModelFactory(transactionViewModel);
         homeViewModel = new ViewModelProvider(requireActivity(), factory).get(HomeViewModel.class);
@@ -78,18 +75,27 @@ public class HomeFragment extends Fragment {
 
     @SuppressLint("DefaultLocale")
     private void setupObservers() {
-        transactionViewModel.getBalance().observe(getViewLifecycleOwner(), balance -> {
-            double income = transactionViewModel.getTotalIncome().getValue() != null ?
-                    transactionViewModel.getTotalIncome().getValue() : 0.0;
-
-            double expense = transactionViewModel.getTotalExpense().getValue() != null ?
-                    transactionViewModel.getTotalExpense().getValue() : 0.0;
-
-            binding.summaryText.setText(String.format("Income: ₱%.2f | Expense: ₱%.2f | Balance: ₱%.2f",
-                    income, expense, balance));
+        homeViewModel.getFlashcards().observe(getViewLifecycleOwner(), flashcards -> {
+            if (flashcards != null && binding.recyclerView.getAdapter() != null) {
+                ((FlashcardsAdapter) binding.recyclerView.getAdapter()).updateFlashcards(flashcards);
+            }
         });
+        transactionViewModel.getBalance().observe(getViewLifecycleOwner(), balance -> updateSummaryText());
+        transactionViewModel.getTotalIncome().observe(getViewLifecycleOwner(), income -> updateSummaryText());
+        transactionViewModel.getTotalExpense().observe(getViewLifecycleOwner(), expense -> updateSummaryText());
     }
 
+    private void updateSummaryText() {
+        double income = transactionViewModel.getTotalIncome().getValue() != null ?
+                transactionViewModel.getTotalIncome().getValue() : 0.0;
+        double expense = transactionViewModel.getTotalExpense().getValue() != null ?
+                transactionViewModel.getTotalExpense().getValue() : 0.0;
+        double balance = transactionViewModel.getBalance().getValue() != null ?
+                transactionViewModel.getBalance().getValue() : 0.0;
+
+        binding.summaryText.setText(String.format("Income: ₱%.2f | Expense: ₱%.2f | Balance: ₱%.2f",
+                income, expense, balance));
+    }
 
 
     private void showInputDialog(Flashcard flashcard, int position) {
@@ -133,7 +139,34 @@ public class HomeFragment extends Fragment {
                 .setNegativeButton(R.string.cancel, null)
                 .show();
     }
+    private void setupUserMenu() {
+        SessionManager session = new SessionManager(requireContext());
+        DatabaseHelper dbHelper = new DatabaseHelper(requireContext());
+        String username = dbHelper.getUsername(session.getUserId());
 
+        TextView tvUsername = binding.toolbar.findViewById(R.id.tv_username);
+        tvUsername.setText(username != null ? username : "User");
+
+        ImageButton btnMenu = binding.toolbar.findViewById(R.id.btn_menu);
+        btnMenu.setOnClickListener(v -> showUserMenu());
+
+        if (tvUsername != null && username != null) {
+            tvUsername.setText(username);
+        } else {
+            Log.e("HomeFragment", "Username TextView not found or username is null");
+        }
+    }
+    private void showUserMenu() {
+        PopupMenu popup = new PopupMenu(requireContext(), binding.toolbar.findViewById(R.id.btn_menu));
+        popup.getMenu().add("Log Out");
+        popup.setOnMenuItemClickListener(item -> {
+            new SessionManager(requireContext()).logoutUser();
+            startActivity(new Intent(requireActivity(), LoginActivity.class));
+            requireActivity().finish();
+            return true;
+        });
+        popup.show();
+    }
     private boolean validateInput(String amountStr, String date) {
         if (amountStr.isEmpty() || date.isEmpty()) {
             Toast.makeText(requireContext(), "All fields are required!", Toast.LENGTH_SHORT).show();
@@ -148,23 +181,7 @@ public class HomeFragment extends Fragment {
             return false;
         }
     }
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        inflater.inflate(R.menu.menu_home, menu);
-    }
 
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        int itemId = item.getItemId();
-        if (itemId == R.id.menu_logout) {
-            new SessionManager(requireContext()).logoutUser();
-            startActivity(new Intent(requireActivity(), LoginActivity.class));
-            requireActivity().finish();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     @Override
     public void onDestroyView() {

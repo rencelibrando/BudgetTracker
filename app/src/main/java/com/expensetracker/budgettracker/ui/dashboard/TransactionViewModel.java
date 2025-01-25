@@ -104,7 +104,6 @@ public class TransactionViewModel extends AndroidViewModel {
                 values.put(COL_CATEGORY, transaction.getCategory());
                 values.put(COL_DATE, transaction.getDate());
                 values.put(COL_TYPE, transaction.getType());
-                // Add user ID to the transaction record
                 values.put(COLUMN_USER_ID, new SessionManager(getApplication()).getUserId());
 
                 db.insert(TABLE_TRANSACTIONS, null, values);

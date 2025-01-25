@@ -71,9 +71,6 @@ public class TransactionFragment extends Fragment {
                 });
             }
         });
-        transactionViewModel.getTransactions().observe(getViewLifecycleOwner(), transactions -> {
-            transactionsAdapter.updateTransactions(transactions);
-        });
 
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.recyclerView.setAdapter(transactionsAdapter);

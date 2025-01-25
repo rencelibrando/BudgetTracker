@@ -69,4 +69,5 @@
     <string name="passwords_must_match">Passwords must match</string>
     <string name="registration_successful">Registration successful!</string>
     <string name="log_out">Log Out</string>
+    <string name="menu_description">User menu dropdown</string>
 </resources>

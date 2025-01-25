@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -77,21 +78,26 @@ public class SignUpActivity extends AppCompatActivity {
 
     private boolean registerUser(String username, String email, String password) {
         SQLiteDatabase db = databaseHelper.getWritableDatabase();
+        try {
+            String hashedPassword = SecurityUtils.hashPassword(password);
+            if (databaseHelper.isUserExists(db, username, email)) {
+                Toast.makeText(this, "Username or email already exists", Toast.LENGTH_SHORT).show();
+                return false;
+            }
 
-        // Check if user exists
-        String hashedPassword = SecurityUtils.hashPassword(password);
-        if (databaseHelper.isUserExists(db, username, email)) {
-            Toast.makeText(this, "Username or email already exists", Toast.LENGTH_SHORT).show();
+            long result = databaseHelper.createUser(db, username, email, hashedPassword);
+            if (result != -1) {
+                new SessionManager(SignUpActivity.this).loginUser(result, username);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            Log.e("Signup", "Error: " + e.getMessage());
+            runOnUiThread(() ->
+                    Toast.makeText(SignUpActivity.this, "Registration failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+            );
             return false;
         }
-
-        // Insert new user
-        long result = databaseHelper.createUser(db, username, email, hashedPassword);
-        if (result != -1) {
-            new SessionManager(SignUpActivity.this).loginUser((int) result);
-            return true;
-        }
-        return false;
     }
 
     private void navigateToLogin() {

@@ -9,7 +9,7 @@ import android.util.Log;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "BudgetTracker.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     // User Table
     public static final String TABLE_USERS = "users";
@@ -63,15 +63,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     // Add to DatabaseHelper class
     public boolean isUserExists(SQLiteDatabase db, String username, String email) {
-        Cursor cursor = db.query(TABLE_USERS,
-                new String[]{COLUMN_USER_ID},
-                COLUMN_USERNAME + " = ? OR " + COLUMN_EMAIL + " = ?",
-                new String[]{username, email},
-                null, null, null);
+        synchronized(this) {
+            Cursor cursor = db.query(TABLE_USERS,
+                    new String[]{COLUMN_USER_ID},
+                    COLUMN_USERNAME + " = ? OR " + COLUMN_EMAIL + " = ?",
+                    new String[]{username, email},
+                    null, null, null);
 
-        boolean exists = cursor.getCount() > 0;
-        cursor.close();
-        return exists;
+            boolean exists = cursor.getCount() > 0;
+            cursor.close();
+            return exists;
+        }
     }
 
     public long createUser(SQLiteDatabase db, String username, String email, String hashedPassword) {
@@ -86,7 +88,21 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             return -1; // Return -1 on error
         }
     }
-
+    public String getUsername(long userId) {
+        SQLiteDatabase db = getReadableDatabase();
+        try (Cursor cursor = db.query(
+                TABLE_USERS,
+                new String[]{COLUMN_USERNAME},
+                COLUMN_USER_ID + "=?",
+                new String[]{String.valueOf(userId)},
+                null, null, null
+        )) {
+            if (cursor.moveToFirst()) {
+                return cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME));
+            }
+        }
+        return null;
+    }
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);

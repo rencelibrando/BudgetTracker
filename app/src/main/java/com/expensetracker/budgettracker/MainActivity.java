@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -14,6 +15,7 @@ import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.expensetracker.budgettracker.data.DatabaseHelper;
 import com.expensetracker.budgettracker.databinding.ActivityMainBinding;
 import com.expensetracker.budgettracker.ui.dashboard.TransactionViewModel;
 import com.expensetracker.budgettracker.ui.home.HomeViewModel;
@@ -31,6 +33,14 @@ public class MainActivity extends AppCompatActivity {
 
         SessionManager sessionManager = new SessionManager(this);
         if (!sessionManager.isLoggedIn()) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+        long userId = sessionManager.getUserId();
+        DatabaseHelper databaseHelper = new DatabaseHelper(this); // Create instance
+        if (userId == -1 || databaseHelper.getUsername(userId) == null) { // Use instance method
+            sessionManager.logoutUser();
             startActivity(new Intent(this, LoginActivity.class));
             finish();
         }
@@ -103,6 +113,8 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e("MainActivity", "Error in onCreate", e);
+            Toast.makeText(this, "App initialization failed", Toast.LENGTH_SHORT).show();
+            finish();
         }
 
         Log.d("MainActivity", "onCreate completed");
