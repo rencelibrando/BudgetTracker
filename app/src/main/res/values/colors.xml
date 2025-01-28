@@ -11,15 +11,10 @@
     <color name="background">#FFFFFF</color> <!-- Light background -->
     <color name="surface">#F5F5F5</color> <!-- Light elevated surface -->
 
-    <!-- Text Colors -->
+
     <color name="text_primary">#000000</color> <!-- Black text for light background -->
     <color name="text_secondary">#757575</color> <!-- Grey text -->
-
-    <color name="pastel_default_color">#FFFFFF</color> <!-- White as default for light mode -->
-    <!-- colors.xml -->
     <color name="green_500">#4CAF50</color>
-    <color name="text_">#212121</color>  <!-- Dark gray for AA contrast -->
-    <color name="text_hint">#757575</color>     <!-- Medium gray -->
     <color name="primary_500">#6200EE</color>
     <color name="red_500">#F44336</color>
 </resources>

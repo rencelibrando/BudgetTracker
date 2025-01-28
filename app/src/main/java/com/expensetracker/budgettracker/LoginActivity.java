@@ -49,7 +49,7 @@ public class LoginActivity extends AppCompatActivity {
     private Long validateCredentials(String username, String password) {
         SQLiteDatabase db = databaseHelper.getReadableDatabase();
         final String[] columns = {
-                DatabaseHelper.COLUMN_ID,
+                DatabaseHelper.COLUMN_USER_ID,
                 DatabaseHelper.COLUMN_USERNAME,
                 DatabaseHelper.COLUMN_PASSWORD
         };
@@ -69,7 +69,7 @@ public class LoginActivity extends AppCompatActivity {
             if (cursor.moveToFirst()) {
                 String storedHash = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PASSWORD));
                 if (SecurityUtils.checkPassword(password, storedHash)) {
-                    return cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                    return cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID));
                 }
             }
         } catch (Exception e) {

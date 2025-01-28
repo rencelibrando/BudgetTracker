@@ -17,10 +17,5 @@
         android:label="@string/title_transaction"
         tools:layout="@layout/fragment_transaction" />
 
-    <fragment
-        android:id="@+id/navigation_budget"
-        android:name="com.expensetracker.budgettracker.ui.notifications.BudgetFragment"
-        android:label="@string/title_budget"
-        tools:layout="@layout/fragment_budget" />
 
 </navigation>

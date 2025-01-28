@@ -59,7 +59,6 @@
                 android:layout_height="wrap_content"
                 android:hint="@string/username"
                 android:autofillHints="username"
-                app:startIconDrawable="@drawable/ic_person"
                 app:boxBackgroundMode="outline"
                 app:layout_constraintTop_toTopOf="parent">
 
@@ -79,7 +78,6 @@
                 android:layout_height="wrap_content"
                 android:hint="@string/password"
                 android:autofillHints="password"
-                app:startIconDrawable="@drawable/ic_lock"
                 app:passwordToggleEnabled="true"
                 app:layout_constraintTop_toBottomOf="@id/username_layout"
                 android:layout_marginTop="16dp">

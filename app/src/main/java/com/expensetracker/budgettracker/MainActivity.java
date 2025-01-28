@@ -9,6 +9,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -16,6 +17,9 @@ import androidx.navigation.ui.NavigationUI;
 
 import com.expensetracker.budgettracker.data.DatabaseHelper;
 import com.expensetracker.budgettracker.databinding.ActivityMainBinding;
+import com.expensetracker.budgettracker.ui.dashboard.TransactionViewModel;
+import com.expensetracker.budgettracker.ui.home.HomeViewModel;
+import com.expensetracker.budgettracker.ui.home.HomeViewModelFactory;
 import com.expensetracker.budgettracker.utils.SessionManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -34,15 +38,11 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         long userId = sessionManager.getUserId();
-        Log.d("MainActivity", "User ID: " + userId);
-
-        try (DatabaseHelper databaseHelper = new DatabaseHelper(this)) {
-            if (userId == -1 || databaseHelper.getUsername(userId) == null) {
-                sessionManager.logoutUser();
-                startActivity(new Intent(this, LoginActivity.class));
-                finish();
-                return;
-            }
+        DatabaseHelper databaseHelper = new DatabaseHelper(this); // Create instance
+        if (userId == -1 || databaseHelper.getUsername(userId) == null) { // Use instance method
+            sessionManager.logoutUser();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
         }
         try {
             // Apply light/dark mode based on system settings
@@ -67,8 +67,7 @@ public class MainActivity extends AppCompatActivity {
             // Set up navigation
             AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
                     R.id.navigation_home,
-                    R.id.navigation_transaction,
-                    R.id.navigation_budget
+                    R.id.navigation_transaction
             ).build();
 
             NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
@@ -92,15 +91,19 @@ public class MainActivity extends AppCompatActivity {
                     } else if (item.getItemId() == R.id.navigation_transaction) {
                         navController.navigate(R.id.navigation_transaction);
                         toolbar.setTitle("Transaction");
-                    } else if (item.getItemId() == R.id.navigation_budget) {
-                        navController.navigate(R.id.navigation_budget);
-                        toolbar.setTitle("Budget");
                     } else {
                         return false;
                     }
                     return true;
                 });
 
+                // Update toolbar title dynamically based on navigation
+                navController.addOnDestinationChangedListener((controller, destination, arguments) -> toolbar.setTitle(destination.getLabel()));
+
+                // Initialize HomeViewModel
+                TransactionViewModel transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
+                HomeViewModelFactory factory = new HomeViewModelFactory(transactionViewModel);
+                HomeViewModel homeViewModel = new ViewModelProvider(this, factory).get(HomeViewModel.class);
             } else {
                 Log.e("MainActivity", "NavHostFragment is null. Ensure that nav_host_fragment_activity_main exists in the layout.");
             }

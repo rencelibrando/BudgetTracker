@@ -1,7 +1,7 @@
 package com.expensetracker.budgettracker;
 
-import android.content.ContentValues;
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -77,48 +77,29 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
     private boolean registerUser(String username, String email, String password) {
+        SQLiteDatabase db = databaseHelper.getWritableDatabase();
         try {
             String hashedPassword = SecurityUtils.hashPassword(password);
-
-            // Modified createUser call (removed SQLiteDatabase parameter)
-            long result = databaseHelper.createUser(username, email, hashedPassword);
-
-            if (result != -1) {
-                new SessionManager(this).loginUser(result, username);
-                insertDefaultFlashcardsForUser(result);
-                return true;
-            } else {
+            if (databaseHelper.isUserExists(db, username, email)) {
                 Toast.makeText(this, "Username or email already exists", Toast.LENGTH_SHORT).show();
                 return false;
             }
+
+            long result = databaseHelper.createUser(db, username, email, hashedPassword);
+            if (result != -1) {
+                new SessionManager(SignUpActivity.this).loginUser(result, username);
+                return true;
+            }
+            return false;
         } catch (Exception e) {
             Log.e("Signup", "Error: " + e.getMessage());
             runOnUiThread(() ->
-                    Toast.makeText(this, "Registration failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(SignUpActivity.this, "Registration failed: " + e.getMessage(), Toast.LENGTH_SHORT).show()
             );
             return false;
         }
     }
-    private void insertDefaultFlashcardsForUser(long userId) {
-        int[][] defaultFlashcards = {
-                {R.string.category_food, R.drawable.ic_food},
-                {R.string.category_transport, R.drawable.ic_transport},
-                {R.string.category_housing, R.drawable.ic_housing},
-                {R.string.category_personal_care, R.drawable.ic_personal_care},
-                {R.string.category_shopping, R.drawable.ic_shopping},
-                {R.string.category_salary, R.drawable.ic_salary}
-        };
 
-        ContentValues values = new ContentValues();
-        for (int[] flashcard : defaultFlashcards) {
-            values.put(DatabaseHelper.COLUMN_USER_ID, userId);
-            values.put(DatabaseHelper.COLUMN_LABEL, getString(flashcard[0]));
-            values.put(DatabaseHelper.COLUMN_ICON_RES_ID, flashcard[1]);
-            values.put(DatabaseHelper.COLUMN_AMOUNT, 0.0); // Initialize amount to 0
-            databaseHelper.getWritableDatabase().insert(DatabaseHelper.TABLE_FLASHCARDS, null, values);
-            values.clear();
-        }
-    }
     private void navigateToLogin() {
         startActivity(new Intent(this, LoginActivity.class));
         finish();

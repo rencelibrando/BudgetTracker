@@ -2,7 +2,6 @@ package com.expensetracker.budgettracker.ui.dashboard;
 
 import android.app.Application;
 import android.content.ContentValues;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
@@ -11,7 +10,6 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.Observer;
 
 import com.expensetracker.budgettracker.data.DatabaseHelper;
 import com.expensetracker.budgettracker.models.Transaction;
@@ -25,21 +23,9 @@ import java.util.concurrent.Executors;
 
 public class TransactionViewModel extends AndroidViewModel {
     private static final String TAG = "TransactionViewModel";
-    private final Observer<List<Transaction>> transactionsObserver =
-            transactions -> updateTotals();
     private final DatabaseHelper databaseHelper;
     private final ExecutorService executorService;
 
-    // Database schema constants (must match DatabaseHelper.java)
-    private static final String TABLE_TRANSACTIONS = "transactions";
-    private static final String COL_ID = "id";
-    private static final String COL_AMOUNT = "amount";
-    private static final String COL_CATEGORY = "category";
-    private static final String COL_DATE = "date";
-    private static final String COL_TYPE = "type";
-    private static final String COLUMN_USER_ID = "user_id"; // Must match your database column name
-
-    // LiveData containers
     private final MutableLiveData<List<Transaction>> transactions = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Double> totalIncome = new MutableLiveData<>(0.0);
     private final MutableLiveData<Double> totalExpense = new MutableLiveData<>(0.0);
@@ -49,16 +35,15 @@ public class TransactionViewModel extends AndroidViewModel {
         super(application);
         databaseHelper = new DatabaseHelper(application);
         executorService = Executors.newSingleThreadExecutor();
-        transactions.observeForever(transactions -> updateTotals());
-        // Configure balance calculations
-        balance.addSource(totalIncome, income ->
-                balance.setValue(income - (totalExpense.getValue() != null ? totalExpense.getValue() : 0.0))
-        );
-        balance.addSource(totalExpense, expense ->
-                balance.setValue((totalIncome.getValue() != null ? totalIncome.getValue() : 0.0) - expense)
-        );
+
+        balance.addSource(totalIncome, income -> balance.setValue(income - getNonNullValue(totalExpense.getValue())));
+        balance.addSource(totalExpense, expense -> balance.setValue(getNonNullValue(totalIncome.getValue()) - expense));
 
         loadTransactions();
+    }
+
+    private double getNonNullValue(Double value) {
+        return value != null ? value : 0.0;
     }
 
     public void loadTransactions() {
@@ -66,27 +51,28 @@ public class TransactionViewModel extends AndroidViewModel {
             List<Transaction> transactionsList = new ArrayList<>();
             SQLiteDatabase db = databaseHelper.getReadableDatabase();
 
-            // Add user-specific filtering
-            String selection = COLUMN_USER_ID + " = ?";
-            String[] selectionArgs = {String.valueOf(new SessionManager(getApplication()).getUserId())};
-
-            try (Cursor cursor = db.query(
-                    TABLE_TRANSACTIONS,
-                    new String[]{COL_ID, COL_AMOUNT, COL_CATEGORY, COL_DATE, COL_TYPE},
-                    selection,  // Updated: Apply user filter
-                    selectionArgs,  // Updated: User ID argument
-                    null,
-                    null,
-                    COL_DATE + " DESC")) {
+            try (var cursor = db.query(
+                    DatabaseHelper.TABLE_TRANSACTIONS,
+                    new String[]{
+                            DatabaseHelper.COLUMN_TRANSACTION_ID,
+                            DatabaseHelper.COLUMN_AMOUNT,
+                            DatabaseHelper.COLUMN_CATEGORY,
+                            DatabaseHelper.COLUMN_DATE,
+                            DatabaseHelper.COLUMN_TYPE
+                    },
+                    DatabaseHelper.COLUMN_USER_ID + " = ?",
+                    new String[]{String.valueOf(new SessionManager(getApplication()).getUserId())},
+                    null, null, DatabaseHelper.COLUMN_DATE + " DESC"
+            )) {
 
                 while (cursor.moveToNext()) {
                     Transaction transaction = new Transaction(
-                            cursor.getString(cursor.getColumnIndexOrThrow(COL_CATEGORY)),
-                            cursor.getDouble(cursor.getColumnIndexOrThrow(COL_AMOUNT)),
-                            cursor.getString(cursor.getColumnIndexOrThrow(COL_DATE)),
-                            cursor.getString(cursor.getColumnIndexOrThrow(COL_TYPE))
+                            cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_CATEGORY)),
+                            cursor.getDouble(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_AMOUNT)),
+                            cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_DATE)),
+                            cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TYPE))
                     );
-                    transaction.setId(cursor.getInt(cursor.getColumnIndexOrThrow(COL_ID)));
+                    transaction.setId(cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TRANSACTION_ID)));
                     transactionsList.add(transaction);
                 }
             } catch (Exception e) {
@@ -94,6 +80,7 @@ public class TransactionViewModel extends AndroidViewModel {
             }
 
             transactions.postValue(Collections.unmodifiableList(transactionsList));
+            updateTotals(transactionsList);
         });
     }
 
@@ -102,59 +89,26 @@ public class TransactionViewModel extends AndroidViewModel {
             SQLiteDatabase db = databaseHelper.getWritableDatabase();
             try {
                 ContentValues values = new ContentValues();
-                values.put(COL_AMOUNT, transaction.getAmount());
-                values.put(COL_CATEGORY, transaction.getCategory());
-                values.put(COL_DATE, transaction.getDate());
-                values.put(COL_TYPE, transaction.getType());
-                values.put(COLUMN_USER_ID, new SessionManager(getApplication()).getUserId());
+                values.put(DatabaseHelper.COLUMN_AMOUNT, transaction.getAmount());
+                values.put(DatabaseHelper.COLUMN_CATEGORY, transaction.getCategory());
+                values.put(DatabaseHelper.COLUMN_DATE, transaction.getDate());
+                values.put(DatabaseHelper.COLUMN_TYPE, transaction.getType());
+                values.put(DatabaseHelper.COLUMN_USER_ID, new SessionManager(getApplication()).getUserId());
 
-                db.insert(TABLE_TRANSACTIONS, null, values);
-                loadTransactions(); // Refresh data
+                db.insert(DatabaseHelper.TABLE_TRANSACTIONS, null, values);
+                loadTransactions();
             } catch (Exception e) {
                 Log.e(TAG, "Error adding transaction", e);
             }
         });
     }
 
-    // LiveData getters
-    public LiveData<List<Transaction>> getTransactions() {
-        return transactions;
-    }
-    public LiveData<Double> getBalance() {
-        return balance;
-    }
-    public LiveData<Double> getTotalIncome() {
-        return totalIncome;
-    }
-
-    public LiveData<Double> getTotalExpense() {
-        return totalExpense;
-    }
-
-    private void updateTotals() {
-        double income = 0;
-        double expense = 0;
-
-        List<Transaction> currentList = transactions.getValue();
-        if (currentList != null && !currentList.isEmpty()) {
-            for (Transaction t : currentList) {
-                if ("income".equalsIgnoreCase(t.getType())) {
-                    income += t.getAmount();
-                } else {
-                    expense += t.getAmount();
-                }
-            }
-        }
-
-        totalIncome.postValue(income);
-        totalExpense.postValue(expense);
-    }
     public void deleteTransaction(Transaction transaction) {
         executorService.execute(() -> {
             SQLiteDatabase db = databaseHelper.getWritableDatabase();
             try {
-                db.delete(TABLE_TRANSACTIONS,
-                        COL_ID + "=?",
+                db.delete(DatabaseHelper.TABLE_TRANSACTIONS,
+                        DatabaseHelper.COLUMN_TRANSACTION_ID + " = ?",
                         new String[]{String.valueOf(transaction.getId())});
                 loadTransactions();
             } catch (Exception e) {
@@ -163,10 +117,41 @@ public class TransactionViewModel extends AndroidViewModel {
         });
     }
 
+    private void updateTotals(List<Transaction> transactionsList) {
+        double income = 0.0;
+        double expense = 0.0;
+
+        for (Transaction t : transactionsList) {
+            if ("income".equalsIgnoreCase(t.getType())) {
+                income += t.getAmount();
+            } else {
+                expense += t.getAmount();
+            }
+        }
+
+        totalIncome.postValue(income);
+        totalExpense.postValue(expense);
+    }
+
+    public LiveData<List<Transaction>> getTransactions() {
+        return transactions;
+    }
+
+    public LiveData<Double> getTotalIncome() {
+        return totalIncome;
+    }
+
+    public LiveData<Double> getTotalExpense() {
+        return totalExpense;
+    }
+
+    public LiveData<Double> getBalance() {
+        return balance;
+    }
+
     @Override
     protected void onCleared() {
         super.onCleared();
-        transactions.removeObserver(transactionsObserver); // Remove observer to prevent leaks
         executorService.shutdown();
     }
 }

@@ -20,9 +20,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.expensetracker.budgettracker.R;
 import com.expensetracker.budgettracker.adapters.FlashcardsAdapter;
 import com.expensetracker.budgettracker.models.Flashcard;
+import com.expensetracker.budgettracker.models.Transaction;
+import com.expensetracker.budgettracker.ui.dashboard.TransactionViewModel;
 import com.expensetracker.budgettracker.ui.home.HomeViewModel;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 
 public class FlashcardsFragment extends Fragment {
 
@@ -72,7 +77,23 @@ public class FlashcardsFragment extends Fragment {
                 .setPositiveButton(R.string.ok, (dialog, which) -> {
                     String amountStr = input.getText().toString().trim();
                     if (validateAmount(amountStr)) {
-                        updateFlashcardAmount(flashcard, position, Double.parseDouble(amountStr));
+                        double amount = Double.parseDouble(amountStr);
+                        String type = flashcard.getLabel().equalsIgnoreCase("salary") ? "income" : "expense";
+
+                        // Create a new transaction
+                        Transaction transaction = new Transaction(
+                                flashcard.getLabel(),
+                                amount,
+                                new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date()),
+                                type
+                        );
+
+                        // Update the TransactionViewModel
+                        TransactionViewModel transactionViewModel = new ViewModelProvider(requireActivity()).get(TransactionViewModel.class);
+                        transactionViewModel.addTransaction(transaction);
+
+                        // Update the flashcard amount
+                        updateFlashcardAmount(flashcard, position, amount);
                     } else {
                         Toast.makeText(context, R.string.invalid_amount_error, Toast.LENGTH_SHORT).show();
                     }
@@ -91,11 +112,10 @@ public class FlashcardsFragment extends Fragment {
     }
 
     private void updateFlashcardAmount(Flashcard flashcard, int position, double amount) {
+        // Use static method call for currency formatting
         String formattedAmount = HomeViewModel.formatCurrency(amount);
-
         flashcard.setAmount(formattedAmount);
         adapter.updateFlashcard(position, formattedAmount);
-
-        homeViewModel.updateFlashcardAmount(flashcard.getLabel(), amount);
+        homeViewModel.updateFlashcardAmount(flashcard, amount);
     }
 }

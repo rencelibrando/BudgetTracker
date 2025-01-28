@@ -1,6 +1,7 @@
 package com.expensetracker.budgettracker.adapters;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,30 +10,25 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
-
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.expensetracker.budgettracker.R;
 import com.expensetracker.budgettracker.models.Flashcard;
 
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 
 public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.FlashcardViewHolder> {
 
     private final List<Flashcard> flashcards;
     private final OnItemClickListener listener;
-    private static final Logger logger = Logger.getLogger(FlashcardsAdapter.class.getName());
+
     public interface OnItemClickListener {
         void onItemClick(Flashcard flashcard, int position);
     }
 
-    // Modified constructor to copy the input list
     public FlashcardsAdapter(Context context, List<Flashcard> flashcards, OnItemClickListener listener) {
-        this.flashcards = new ArrayList<>(flashcards); // Create a copy
+        this.flashcards = new ArrayList<>(flashcards);
         this.listener = listener;
     }
 
@@ -53,8 +49,10 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
             holder.label.setText(flashcard.getLabel());
             holder.amount.setText(flashcard.getAmount());
         } catch (Exception e) {
-            // Handle potential null/data issues
-            logger.log(Level.SEVERE, "An error occurred", e);
+            Log.e("FlashcardsAdapter", "Error binding flashcard: " + e.getMessage());
+            holder.icon.setImageResource(R.drawable.ic_category_default); // Fallback icon
+            holder.label.setText("Error");
+            holder.amount.setText("₱0.00");
         }
 
         holder.itemView.setOnClickListener(v -> {
@@ -70,7 +68,6 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
         return flashcards.size();
     }
 
-    // Improved update method with null safety
     public void updateFlashcards(List<Flashcard> newFlashcards) {
         List<Flashcard> safeList = new ArrayList<>(newFlashcards != null ? newFlashcards : new ArrayList<>());
 
@@ -82,9 +79,13 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
         diffResult.dispatchUpdatesTo(this);
     }
 
+    public void updateFlashcard(int position, String newAmount) {
+        if (position >= 0 && position < flashcards.size()) {
+            flashcards.get(position).setAmount(newAmount);
+            notifyItemChanged(position);
+        }
+    }
 
-
-    // ViewHolder remains the same
     protected static class FlashcardViewHolder extends RecyclerView.ViewHolder {
         final ImageView icon;
         final TextView label;
@@ -97,7 +98,7 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
             amount = itemView.findViewById(R.id.card_amount);
         }
     }
-    // Enhanced DiffUtil callback
+
     static class FlashcardsDiffCallback extends DiffUtil.Callback {
         private final List<Flashcard> oldList;
         private final List<Flashcard> newList;
@@ -130,14 +131,6 @@ public class FlashcardsAdapter extends RecyclerView.Adapter<FlashcardsAdapter.Fl
             return oldItem.getLabel().equals(newItem.getLabel()) &&
                     oldItem.getAmount().equals(newItem.getAmount()) &&
                     oldItem.getIconResId() == newItem.getIconResId();
-        }
-    }
-
-    // Added range check for update
-    public void updateFlashcard(int position, String newAmount) {
-        if (position >= 0 && position < flashcards.size()) {
-            flashcards.get(position).setAmount(newAmount);
-            notifyItemChanged(position);
         }
     }
 }

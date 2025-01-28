@@ -11,10 +11,4 @@
         android:icon="@drawable/ic_transaction"
         android:title="@string/title_transaction" />
 
-    <item
-        android:id="@+id/navigation_budget"
-        android:icon="@drawable/ic_budget"
-        android:title="@string/title_budget" />
-
-
 </menu>

@@ -1,6 +1,5 @@
 package com.expensetracker.budgettracker.utils;
 
-import android.annotation.SuppressLint;
 import android.app.DatePickerDialog;
 import android.content.Context;
 import android.widget.TextView;
@@ -17,7 +16,7 @@ public class DatePickerHelper {
         DatePickerDialog datePicker = new DatePickerDialog(
                 context,
                 (view, selectedYear, selectedMonth, selectedDay) -> {
-                    @SuppressLint("DefaultLocale") String formattedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay);
+                    String formattedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay);
                     dateInput.setText(formattedDate);
                 },
                 year, month, day

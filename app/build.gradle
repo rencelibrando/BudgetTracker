@@ -20,6 +20,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
         }
     }
     compileOptions {
@@ -58,6 +59,7 @@ dependencies {
     implementation libs.mpandroidchart
     implementation libs.bcrypt
     implementation libs.jbcrypt
+    implementation libs.androidx.navigation.fragment.ktx.v253
     implementation libs.androidx.navigation.ui.ktx.v253
     implementation libs.retrofit
     implementation libs.converter.gson

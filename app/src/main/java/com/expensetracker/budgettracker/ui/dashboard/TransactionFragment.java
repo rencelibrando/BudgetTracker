@@ -18,6 +18,7 @@ import com.expensetracker.budgettracker.databinding.FragmentTransactionBinding;
 import com.expensetracker.budgettracker.models.Transaction;
 
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -43,17 +44,12 @@ public class TransactionFragment extends Fragment {
         transactionViewModel = new ViewModelProvider(requireActivity()).get(TransactionViewModel.class);
 
         setupRecyclerView();
+        setupObservers();
 
-        transactionViewModel.getTransactions().observe(getViewLifecycleOwner(), transactions -> {
-            if (transactions != null) {
-                transactionsAdapter.updateTransactions(transactions);
-            }
+        binding.swipeRefresh.setOnRefreshListener(() -> {
+            transactionViewModel.loadTransactions();
+            binding.swipeRefresh.setRefreshing(false);
         });
-        transactionViewModel.getTotalIncome().observe(getViewLifecycleOwner(), income ->
-                binding.totalIncome.setText(getString(R.string.total_income, income)));
-
-        transactionViewModel.getTotalExpense().observe(getViewLifecycleOwner(), expense ->
-                binding.totalExpenses.setText(getString(R.string.total_expenses, expense)));
     }
 
     private void setupRecyclerView() {
@@ -62,6 +58,7 @@ public class TransactionFragment extends Fragment {
             public void onItemClick(Transaction transaction, int position) {
                 Log.d(TAG, "Transaction clicked: " + transaction);
             }
+
             @Override
             public void onItemDelete(Transaction transaction, int position) {
                 executorService.execute(() -> {
@@ -70,11 +67,25 @@ public class TransactionFragment extends Fragment {
                 });
             }
         });
-
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.recyclerView.setAdapter(transactionsAdapter);
     }
 
+    private void setupObservers() {
+        transactionViewModel.getTransactions().observe(getViewLifecycleOwner(), transactions -> {
+            if (transactions != null) {
+                transactionsAdapter.updateTransactions(transactions);
+            }
+        });
+
+        transactionViewModel.getTotalIncome().observe(getViewLifecycleOwner(), income ->
+                binding.totalIncome.setText(getString(R.string.total_income_label,
+                        String.format(Locale.getDefault(), "₱%.2f", income))));
+
+        transactionViewModel.getTotalExpense().observe(getViewLifecycleOwner(), expense ->
+                binding.totalExpenses.setText(getString(R.string.total_expenses_label,
+                        String.format(Locale.getDefault(), "₱%.2f", expense))));
+    }
 
     @Override
     public void onDestroyView() {

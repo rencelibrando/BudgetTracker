@@ -19,8 +19,5 @@
         <!-- Status bar color -->
         <item name="android:statusBarColor">?attr/colorPrimaryContainer</item>
     </style>
-    <style name="CardText" parent="TextAppearance.Material3.BodyMedium">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/text_primary</item>
-    </style>
+
 </resources>
