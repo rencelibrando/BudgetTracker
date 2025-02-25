@@ -5,7 +5,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
-
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
@@ -14,7 +14,6 @@ import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
-
 import com.expensetracker.budgettracker.data.DatabaseHelper;
 import com.expensetracker.budgettracker.databinding.ActivityMainBinding;
 import com.expensetracker.budgettracker.ui.dashboard.TransactionViewModel;
@@ -22,107 +21,132 @@ import com.expensetracker.budgettracker.ui.home.HomeViewModel;
 import com.expensetracker.budgettracker.ui.home.HomeViewModelFactory;
 import com.expensetracker.budgettracker.utils.SessionManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate started");
 
-        Log.d("MainActivity", "onCreate started");
+        // Initialize binding first to avoid memory leaks
+        ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
+        // Check session and user validity
         SessionManager sessionManager = new SessionManager(this);
         if (!sessionManager.isLoggedIn()) {
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
+            navigateToLogin();
             return;
         }
-        long userId = sessionManager.getUserId();
-        DatabaseHelper databaseHelper = new DatabaseHelper(this); // Create instance
-        if (userId == -1 || databaseHelper.getUsername(userId) == null) { // Use instance method
-            sessionManager.logoutUser();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-        }
-        try {
-            // Apply light/dark mode based on system settings
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-                Log.d("MainActivity", "Using system default night mode");
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-                Log.d("MainActivity", "Defaulting to light mode");
-            }
 
-            // Initialize binding
-            ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
-            setContentView(binding.getRoot());
-            Log.d("MainActivity", "Binding successful");
+        // Validate user data in background
+        executor.execute(() -> {
+            DatabaseHelper dbHelper = new DatabaseHelper(MainActivity.this);
+            try {
+                long userId = sessionManager.getUserId();
+                boolean isValidUser = userId != -1 && dbHelper.getUsername(userId) != null;
 
-            // Set up Toolbar as the ActionBar
-            Toolbar toolbar = findViewById(R.id.toolbar);
-            setSupportActionBar(toolbar);
-            Log.d("MainActivity", "Toolbar set as ActionBar");
-
-            // Set up navigation
-            AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-                    R.id.navigation_home,
-                    R.id.navigation_transaction
-            ).build();
-
-            NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
-                    .findFragmentById(R.id.nav_host_fragment_activity_main);
-
-            if (navHostFragment != null) {
-                NavController navController = navHostFragment.getNavController();
-                Log.d("MainActivity", "NavController initialized");
-
-                NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
-                // BottomNavigationView setup
-                BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
-                NavigationUI.setupWithNavController(bottomNavigationView, navController);
-
-                // Add debug listener for BottomNavigationView
-                bottomNavigationView.setOnItemSelectedListener(item -> {
-                    if (item.getItemId() == R.id.navigation_home) {
-                        navController.navigate(R.id.navigation_home);
-                        toolbar.setTitle("Home");
-                    } else if (item.getItemId() == R.id.navigation_transaction) {
-                        navController.navigate(R.id.navigation_transaction);
-                        toolbar.setTitle("Transaction");
+                runOnUiThread(() -> {
+                    if (!isValidUser) {
+                        sessionManager.logoutUser();
+                        navigateToLogin();
                     } else {
-                        return false;
+                        initializeUI(binding, sessionManager);
                     }
-                    return true;
                 });
-
-                // Update toolbar title dynamically based on navigation
-                navController.addOnDestinationChangedListener((controller, destination, arguments) -> toolbar.setTitle(destination.getLabel()));
-
-                // Initialize HomeViewModel
-                TransactionViewModel transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
-                HomeViewModelFactory factory = new HomeViewModelFactory(transactionViewModel);
-                HomeViewModel homeViewModel = new ViewModelProvider(this, factory).get(HomeViewModel.class);
-            } else {
-                Log.e("MainActivity", "NavHostFragment is null. Ensure that nav_host_fragment_activity_main exists in the layout.");
+            } finally {
+                dbHelper.close();
             }
+        });
+    }
+
+    private void navigateToLogin() {
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    private void initializeUI(@NonNull ActivityMainBinding binding, SessionManager sessionManager) {
+        try {
+            setupTheme();
+            setupToolbar(binding.toolbar);
+            setupNavigation(binding);
+            setupViewModels();
+            Log.d(TAG, "UI initialization completed");
         } catch (Exception e) {
-            Log.e("MainActivity", "Error in onCreate", e);
-            Toast.makeText(this, "App initialization failed", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Error initializing UI", e);
+            Toast.makeText(this, "UI initialization failed", Toast.LENGTH_SHORT).show();
             finish();
         }
+    }
 
-        Log.d("MainActivity", "onCreate completed");
+    private void setupTheme() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
+    }
+
+    private void setupToolbar(Toolbar toolbar) {
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+    }
+
+    private void setupNavigation(@NonNull ActivityMainBinding binding) {
+        NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.nav_host_fragment_activity_main);
+        NavController navController = navHostFragment != null
+                ? navHostFragment.getNavController()
+                : null;
+
+        if (navController != null) {
+            AppBarConfiguration appBarConfig = new AppBarConfiguration.Builder(
+                    R.id.navigation_home,
+                    R.id.navigation_transaction)
+                    .build();
+
+            NavigationUI.setupActionBarWithNavController(this, navController, appBarConfig);
+            NavigationUI.setupWithNavController(binding.bottomNavigation, navController);
+
+            navController.addOnDestinationChangedListener((controller, destination, args) -> {
+                if (getSupportActionBar() != null) {
+                    getSupportActionBar().setTitle(destination.getLabel());
+                }
+            });
+        } else {
+            Log.e(TAG, "NavController not found");
+            finish();
+        }
+    }
+
+    private void setupViewModels() {
+        TransactionViewModel transactionVM = new ViewModelProvider(this).get(TransactionViewModel.class);
+        HomeViewModelFactory factory = new HomeViewModelFactory(transactionVM);
+        HomeViewModel homeVM = new ViewModelProvider(this, factory).get(HomeViewModel.class);
+        // Add ViewModel observers if needed
     }
 
     @Override
     public boolean onSupportNavigateUp() {
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment_activity_main);
-        if (navHostFragment != null) {
-            return navHostFragment.getNavController().navigateUp() || super.onSupportNavigateUp();
-        }
-        return super.onSupportNavigateUp();
+        return navHostFragment != null
+                ? navHostFragment.getNavController().navigateUp()
+                : super.onSupportNavigateUp();
+    }
+
+    @Override
+    protected void onDestroy() {
+        executor.shutdown();
+        super.onDestroy();
     }
 }

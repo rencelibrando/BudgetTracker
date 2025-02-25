@@ -13,18 +13,19 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.expensetracker.budgettracker.data.DatabaseHelper;
 import com.expensetracker.budgettracker.utils.SecurityUtils;
 import com.expensetracker.budgettracker.utils.SessionManager;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import android.util.Pair;
 
 public class LoginActivity extends AppCompatActivity {
-
-    private DatabaseHelper databaseHelper;
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
     private EditText etUsername, etPassword;
+    private Button btnLogin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-
-        databaseHelper = new DatabaseHelper(this);
         initializeUI();
         checkExistingSession();
     }
@@ -39,76 +40,74 @@ public class LoginActivity extends AppCompatActivity {
     private void initializeUI() {
         etUsername = findViewById(R.id.et_username);
         etPassword = findViewById(R.id.et_password);
-        Button btnLogin = findViewById(R.id.btn_login);
+        btnLogin = findViewById(R.id.btn_login);
         TextView tvSignUp = findViewById(R.id.tv_sign_up);
 
         btnLogin.setOnClickListener(v -> attemptLogin());
         tvSignUp.setOnClickListener(v -> navigateToSignUp());
     }
 
-    private Long validateCredentials(String username, String password) {
-        SQLiteDatabase db = databaseHelper.getReadableDatabase();
-        final String[] columns = {
-                DatabaseHelper.COLUMN_USER_ID,
-                DatabaseHelper.COLUMN_USERNAME,
-                DatabaseHelper.COLUMN_PASSWORD
-        };
-
-        final String selection = DatabaseHelper.COLUMN_USERNAME + " = ? COLLATE NOCASE";
-        final String[] selectionArgs = {username};
-
-        try (Cursor cursor = db.query(
-                DatabaseHelper.TABLE_USERS,
-                columns,
-                selection,
-                selectionArgs,
-                null,
-                null,
-                null
-        )) {
-            if (cursor.moveToFirst()) {
-                String storedHash = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PASSWORD));
-                if (SecurityUtils.checkPassword(password, storedHash)) {
-                    return cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID));
-                }
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Authentication error", Toast.LENGTH_SHORT).show();
-        }
-        return null;
-    }
-
     private void attemptLogin() {
-        String usernameInput = etUsername.getText().toString().trim();
+        String username = etUsername.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
 
-        if (TextUtils.isEmpty(usernameInput)) {
+        if (TextUtils.isEmpty(username)) {
             etUsername.setError("Username required");
             return;
         }
-
         if (TextUtils.isEmpty(password)) {
             etPassword.setError("Password required");
             return;
         }
 
-        try {
-            Long userId = validateCredentials(usernameInput, password);
-            if (userId != null && userId != -1L) {
-                String storedUsername = databaseHelper.getUsername(userId);
-                if (storedUsername != null) {
-                    SessionManager session = new SessionManager(this);
-                    session.loginUser(userId, storedUsername);
+        btnLogin.setEnabled(false);
+        executor.execute(() -> {
+            Pair<Long, String> result = validateCredentials(username, password);
+            runOnUiThread(() -> {
+                btnLogin.setEnabled(true);
+                if (result != null) {
+                    SessionManager session = new SessionManager(LoginActivity.this);
+                    session.loginUser(result.first, result.second);
                     startMainActivity();
                 } else {
                     showAuthError();
                 }
-            } else {
-                showAuthError();
+            });
+        });
+    }
+
+    private Pair<Long, String> validateCredentials(String username, String password) {
+        DatabaseHelper dbHelper = new DatabaseHelper(getApplicationContext());
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Pair<Long, String> result = null;
+
+        try (Cursor cursor = db.query(
+                DatabaseHelper.TABLE_USERS,
+                new String[]{
+                        DatabaseHelper.COLUMN_USER_ID,
+                        DatabaseHelper.COLUMN_USERNAME,
+                        DatabaseHelper.COLUMN_PASSWORD
+                },
+                DatabaseHelper.COLUMN_USERNAME + " = ? COLLATE NOCASE",
+                new String[]{username},
+                null, null, null
+        )) {
+            if (cursor.moveToFirst()) {
+                String storedHash = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_PASSWORD));
+                if (SecurityUtils.checkPassword(password, storedHash)) {
+                    long userId = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_ID));
+                    String storedUsername = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USERNAME));
+                    result = new Pair<>(userId, storedUsername);
+                }
             }
         } catch (Exception e) {
-            showAuthError();
+            e.printStackTrace();
+            runOnUiThread(() -> Toast.makeText(LoginActivity.this, "Authentication error", Toast.LENGTH_SHORT).show());
+        } finally {
+            db.close();
+            dbHelper.close();
         }
+        return result;
     }
 
     private void startMainActivity() {
@@ -129,7 +128,7 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (databaseHelper != null) databaseHelper.close();
+        executor.shutdown();
         super.onDestroy();
     }
 }

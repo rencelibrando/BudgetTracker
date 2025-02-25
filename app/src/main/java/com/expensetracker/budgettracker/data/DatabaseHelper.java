@@ -16,6 +16,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_USER_ID = "user_id";
     public static final String COLUMN_USERNAME = "username";
     public static final String COLUMN_PASSWORD = "password";
+    public static final String COLUMN_EMAIL = "email";
+    public static final String COLUMN_CREATED_AT = "created_at";
 
     // Transactions Table
     public static final String TABLE_TRANSACTIONS = "transactions";
@@ -24,8 +26,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_CATEGORY = "category";
     public static final String COLUMN_DATE = "date";
     public static final String COLUMN_TYPE = "type";
-    public static final String COLUMN_EMAIL = "email";
-    public static final String COLUMN_CREATED_AT = "created_at";
+
+    // Budgets Table
     public static final String TABLE_BUDGETS = "budgets";
     public static final String COLUMN_BUDGET_ID = "budget_id";
     public static final String COLUMN_BUDGET_AMOUNT = "budget_amount";
@@ -52,7 +54,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_CATEGORY + " TEXT NOT NULL, " +
                 COLUMN_DATE + " TEXT NOT NULL, " +
                 COLUMN_TYPE + " TEXT NOT NULL, " +
-                "FOREIGN KEY(" + COLUMN_USER_ID + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + "));");
+                "FOREIGN KEY(" + COLUMN_USER_ID + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + ") ON DELETE CASCADE);");
 
         // Create Budgets table
         db.execSQL("CREATE TABLE " + TABLE_BUDGETS + " (" +
@@ -60,36 +62,46 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_USER_ID + " INTEGER NOT NULL, " +
                 COLUMN_CATEGORY + " TEXT UNIQUE NOT NULL, " +
                 COLUMN_BUDGET_AMOUNT + " REAL NOT NULL, " +
-                "FOREIGN KEY(" + COLUMN_USER_ID + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + "));");
+                "FOREIGN KEY(" + COLUMN_USER_ID + ") REFERENCES " + TABLE_USERS + "(" + COLUMN_USER_ID + ") ON DELETE CASCADE);");
     }
 
+    /**
+     * Check if a user exists by username or email.
+     */
     public boolean isUserExists(SQLiteDatabase db, String username, String email) {
-        synchronized(this) {
-            Cursor cursor = db.query(TABLE_USERS,
-                    new String[]{COLUMN_USER_ID},
-                    COLUMN_USERNAME + " = ? OR " + COLUMN_EMAIL + " = ?",
-                    new String[]{username, email},
-                    null, null, null);
-
-            boolean exists = cursor.getCount() > 0;
-            cursor.close();
-            return exists;
+        try (Cursor cursor = db.query(
+                TABLE_USERS,
+                new String[]{COLUMN_USER_ID},
+                COLUMN_USERNAME + " = ? OR " + COLUMN_EMAIL + " = ?",
+                new String[]{username, email},
+                null, null, null)) {
+            return cursor.getCount() > 0;
+        } catch (Exception e) {
+            Log.e("DatabaseError", "Failed to check user existence: " + e.getMessage());
+            return false;
         }
     }
 
+    /**
+     * Create a new user in the database.
+     */
     public long createUser(SQLiteDatabase db, String username, String email, String hashedPassword) {
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_USERNAME, username);
+        values.put(COLUMN_EMAIL, email);
+        values.put(COLUMN_PASSWORD, hashedPassword);
+
         try {
-            ContentValues values = new ContentValues();
-            values.put(COLUMN_USERNAME, username);
-            values.put(COLUMN_EMAIL, email);
-            values.put(COLUMN_PASSWORD, hashedPassword);
-            return db.insert(TABLE_USERS, null, values);
+            return db.insertOrThrow(TABLE_USERS, null, values);
         } catch (Exception e) {
             Log.e("DatabaseError", "Failed to create user: " + e.getMessage());
             return -1;
         }
     }
 
+    /**
+     * Get the username for a given user ID.
+     */
     public String getUsername(long userId) {
         SQLiteDatabase db = getReadableDatabase();
         try (Cursor cursor = db.query(
@@ -97,20 +109,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 new String[]{COLUMN_USERNAME},
                 COLUMN_USER_ID + "=?",
                 new String[]{String.valueOf(userId)},
-                null, null, null
-        )) {
+                null, null, null)) {
             if (cursor.moveToFirst()) {
                 return cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME));
             }
+        } catch (Exception e) {
+            Log.e("DatabaseError", "Failed to retrieve username: " + e.getMessage());
         }
         return null;
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+        // Drop tables and recreate them
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_TRANSACTIONS);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_BUDGETS);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
         onCreate(db);
+    }
+
+    @Override
+    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        onUpgrade(db, oldVersion, newVersion);
     }
 }
